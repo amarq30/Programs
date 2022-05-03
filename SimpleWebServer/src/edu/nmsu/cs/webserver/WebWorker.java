@@ -1,5 +1,11 @@
 package edu.nmsu.cs.webserver;
 
+import java.net.Socket;
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.TimeZone;
+import java.util.*;
+
 /**
  * Web worker: an object of this class executes in its own new thread to receive and respond to a
  * single HTTP request. After the constructor the object executes on its "run" method, and leaves
@@ -20,15 +26,7 @@ package edu.nmsu.cs.webserver;
  * @author Jon Cook, Ph.D.
  *
  **/
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.Socket;
-import java.text.DateFormat;
-import java.util.Date;
-import java.util.TimeZone;
+import java.io.*;
 
 public class WebWorker implements Runnable
 {
@@ -52,12 +50,19 @@ public class WebWorker implements Runnable
 	{
 		System.err.println("Handling connection...");
 		try
-		{
+		{	
+			String httpResponse = "501 Not Implemented";
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
-			readHTTPRequest(is);
-			writeHTTPHeader(os, "text/html");
-			writeContent(os);
+			File fileName = readHTTPRequest(is);
+			if(fileName.exists()){
+				httpResponse = "200 OK";
+			}
+			else{
+				httpResponse = "404 Not Found";
+			}
+			writeHTTPHeader(os, "text/html", httpResponse);
+			writeContent(os,fileName,"text/html",httpResponse);
 			os.flush();
 			socket.close();
 		}
@@ -72,9 +77,11 @@ public class WebWorker implements Runnable
 	/**
 	 * Read the HTTP request header.
 	 **/
-	private void readHTTPRequest(InputStream is)
+	private File readHTTPRequest(InputStream is)
 	{
 		String line;
+		String readLine[] = new String[100];
+		File wantedFile = null;
 		BufferedReader r = new BufferedReader(new InputStreamReader(is));
 		while (true)
 		{
@@ -83,18 +90,38 @@ public class WebWorker implements Runnable
 				while (!r.ready())
 					Thread.sleep(1);
 				line = r.readLine();
+				readLine = line.split(" ");
 				System.err.println("Request line: (" + line + ")");
+
 				if (line.length() == 0)
 					break;
+
+				if(readLine[0].equals("GET")){
+					if(readLine[1].equals("/")){
+						wantedFile = new File("index.html");
+					}
+					else{
+						wantedFile = new File(readLine[1].substring(1));
+					}
+
+				}//end if 
+				System.out.println(" This is to debug " + wantedFile);
+				
+				return wantedFile;
 			}
 			catch (Exception e)
 			{
 				System.err.println("Request error: " + e);
 				break;
 			}
+			
 		}
-		return;
+
+		return wantedFile;
 	}
+
+
+
 
 	/**
 	 * Write the HTTP header lines to the client network connection.
@@ -104,12 +131,12 @@ public class WebWorker implements Runnable
 	 * @param contentType
 	 *          is the string MIME content type (e.g. "text/html")
 	 **/
-	private void writeHTTPHeader(OutputStream os, String contentType) throws Exception
+	private void writeHTTPHeader(OutputStream os, String contentType, String httpReq) throws Exception
 	{
 		Date d = new Date();
 		DateFormat df = DateFormat.getDateTimeInstance();
 		df.setTimeZone(TimeZone.getTimeZone("GMT"));
-		os.write("HTTP/1.1 200 OK\n".getBytes());
+		os.write(("HTTP/1.1 " + httpReq + "\n").getBytes());
 		os.write("Date: ".getBytes());
 		os.write((df.format(d)).getBytes());
 		os.write("\n".getBytes());
@@ -130,11 +157,29 @@ public class WebWorker implements Runnable
 	 * @param os
 	 *          is the OutputStream object to write to
 	 **/
-	private void writeContent(OutputStream os) throws Exception
+	private void writeContent(OutputStream os, File wFile, String cType, String httpRes) throws Exception
 	{
-		os.write("<html><head></head><body>\n".getBytes());
-		os.write("<h3>My web server works!</h3>\n".getBytes());
-		os.write("</body></html>\n".getBytes());
+		String line;
+		String cTypeA[] = cType.split("/");
+		Date d = new Date();
+		DateFormat df = DateFormat.getDateTimeInstance();
+		df.setTimeZone(TimeZone.getTimeZone("GMT"));
+		if(httpRes.equals("404 Not Found")){
+			os.write(httpRes.getBytes());
+			return;
+		}//end 404 check
+
+		if(cTypeA[0].equals("text")){
+			BufferedReader br = new BufferedReader(new FileReader(wFile));
+			while((line = br.readLine()) != null){
+
+				os.write(
+					line.replace("<cs371server>", "Andres' Server").replace("<cs371date>", d.toString()).getBytes()
+				);
+
+			}
+			br.close();
+		}//end text file check
 	}
 
 } // end class
