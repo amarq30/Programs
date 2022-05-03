@@ -165,6 +165,7 @@ public class WebWorker implements Runnable
 		DateFormat df = DateFormat.getDateTimeInstance();
 		df.setTimeZone(TimeZone.getTimeZone("GMT"));
 		if(httpRes.equals("404 Not Found")){
+			//This will return a 404 error for file not found
 			os.write(httpRes.getBytes());
 			return;
 		}//end 404 check
