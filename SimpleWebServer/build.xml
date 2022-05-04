@@ -1,14 +1,15 @@
-<project name="MyProject" default="dist" basedir=".">
+<project name="MyProject" default="run" basedir=".">
   <description>
-    simple example build file
+    simple example bin file
   </description>
-  <!-- set global properties for this build -->
+  <!-- set global properties for this bin -->
   <property name="src" location="src"/>
   <property name="bin" location="bin"/>
   <property name="dist" location="dist"/>
 
-  <target name = "run" description = "This is to be able to run our target">
-    <java classpath="${bin}" classname="edu.nmsu.cs.webserver.WebServer" fork="true">
+  <target name = "run" depends="dist" description = "This is to be able to run our target">
+    <java classpath="${bin}" classname="edu.nmsu.cs.webserver.WebServer" fork="true" dir = "www">
+        
         <arg value ="8080"/>
     </java>
 
@@ -17,14 +18,14 @@
   <target name="init">
     <!-- Create the time stamp -->
     <tstamp/>
-    <!-- Create the build directory structure used by compile -->
-    <mkdir dir="${build}"/>
+    <!-- Create the bin directory structure used by compile -->
+    <mkdir dir="${bin}"/>
   </target>
 
   <target name="compile" depends="init"
         description="compile the source">
-    <!-- Compile the Java code from ${src} into ${build} -->
-    <javac srcdir="${src}" destdir="${build}"/>
+    <!-- Compile the Java code from ${src} into ${bin} -->
+    <javac srcdir="${src}" destdir="${bin}"/>
   </target>
 
   <target name="dist" depends="clean,compile"
@@ -32,14 +33,14 @@
     <!-- Create the distribution directory -->
     <mkdir dir="${dist}/lib"/>
 
-    <!-- Put everything in ${build} into the MyProject-${DSTAMP}.jar file -->
-    <jar jarfile="${dist}/lib/MyProject-${DSTAMP}.jar" basedir="${build}"/>
+    <!-- Put everything in ${bin} into the MyProject-${DSTAMP}.jar file -->
+    <jar jarfile="${dist}/lib/MyProject-${DSTAMP}.jar" basedir="${bin}"/>
   </target>
 
   <target name="clean"
         description="clean up">
-    <!-- Delete the ${build} and ${dist} directory trees -->
-    <delete dir="${build}"/>
+    <!-- Delete the ${bin} and ${dist} directory trees -->
+    <delete dir="${bin}"/>
     <delete dir="${dist}"/>
   </target>
 </project>

@@ -5,6 +5,10 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.TimeZone;
 import java.util.*;
+import java.io.ByteArrayOutputStream;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 /**
  * Web worker: an object of this class executes in its own new thread to receive and respond to a
@@ -52,17 +56,19 @@ public class WebWorker implements Runnable
 		try
 		{	
 			String httpResponse = "501 Not Implemented";
+			String fileType = "text/html";
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
-			File fileName = readHTTPRequest(is);
-			if(fileName.exists()){
+			File wantedFile = readHTTPRequest(is);
+			if(wantedFile.exists()){
 				httpResponse = "200 OK";
+				fileType = convertToHttp(wantedFile);
 			}
 			else{
 				httpResponse = "404 Not Found";
 			}
-			writeHTTPHeader(os, "text/html", httpResponse);
-			writeContent(os,fileName,"text/html",httpResponse);
+			writeHTTPHeader(os, fileType, httpResponse);
+			writeContent(os,wantedFile,fileType,httpResponse);
 			os.flush();
 			socket.close();
 		}
@@ -72,6 +78,17 @@ public class WebWorker implements Runnable
 		}
 		System.err.println("Done handling connection.");
 		return;
+	}
+
+	private String convertToHttp(File wantedFile){
+		String http = "text/html";
+		String check[] = wantedFile.toString().split("\\.");
+		System.out.print(Arrays.toString(check));
+		String fileExtend = check[check.length - 1];
+		
+			if(fileExtend.equals("png")|| fileExtend.equals("jpg") || fileExtend.equals("gif"))
+				return "image/" + fileExtend;
+		return http;
 	}
 
 	/**
@@ -169,7 +186,7 @@ public class WebWorker implements Runnable
 			os.write(httpRes.getBytes());
 			return;
 		}//end 404 check
-
+		
 		if(cTypeA[0].equals("text")){
 			BufferedReader br = new BufferedReader(new FileReader(wFile));
 			while((line = br.readLine()) != null){
@@ -181,6 +198,12 @@ public class WebWorker implements Runnable
 			}
 			br.close();
 		}//end text file check
+		else{
+			BufferedImage bImage = ImageIO.read(wFile);
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			ImageIO.write(bImage, cTypeA[1] , bos );	
+			os.write(bos.toByteArray());
+		}
 	}
 
 } // end class
